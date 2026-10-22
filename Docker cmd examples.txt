@@ -1,0 +1,82 @@
+# версия
+PS> docker -v
+# информация
+PS> docker info
+
+# список контейнеров
+PS> docker ps
+# Show all containers (default shows just running)
+PS> docker ps -a
+
+# список образов
+# Show all images (default hides intermediate images)
+PS> docker images -a
+
+# проверка работы на тестовом контейнере
+# https://hub.docker.com/_/hello-world
+# скачивание образа (если не скачен) и запуск контейнера
+PS> docker run hello-world
+
+# удаление контейнеров по списку ID
+PS> docker rm 220e4862ef57 6903add85248
+
+# удаление образов по списку ID
+PS> docker rmi d2c94e258dcb
+
+-----------------------------------------
+
+# скачивание образа postgres 16
+# https://hub.docker.com/_/postgres (см. supported tags)
+PS> docker pull postgres:16
+
+# тестовый запуск контейнера postgres 16
+# проброс TCP-порта 5432 из контейнера на основной компьютер на порт 5433
+# чтобы не было конфликтов с уже установленным локально postgres
+PS> docker run --name corp-db --rm -e POSTGRES_PASSWORD=postgres -p 5433:5432 -d postgres:16
+
+# информация о контейнере по ID
+PS> docker inspect e84bced6bc93
+
+# остановка контейнера по ID (и удаление, если при запуске был ключ --rm)
+PS> docker stop e84bced6bc93
+
+# подключиться консолью внутрь запущенного контейнера с именем corp-db
+# выход по exit
+PS> docker exec -it corp-db bash
+
+# запустить psql-утилиту внутри запущенного контейнера
+PS> docker exec -it corp-db psql -U postgres
+
+# создание volume
+PS> docker volume create corp-pgdata
+
+# запуск контейнера с volume
+PS> docker run --name corp-db --rm -e POSTGRES_PASSWORD=postgres -p 5433:5432 -v corp-pgdata:/var/lib/postgresql/data -d postgres:16
+
+-----------------------------------------
+
+# использование docker compose
+# Файл docker-compose.yml
+
+services:
+  db:
+    container_name: corp-db
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "corpdb"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "5433:5432"
+    volumes:
+      - corp-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  corp-pgdata:
+
+# запуск из текущего каталога с файлом docker-compose.yml
+PS> docker compose up -d
+
+# останов из текущего каталога с файлом docker-compose.yml
+PS> docker compose down
