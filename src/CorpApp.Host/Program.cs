@@ -14,9 +14,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// ВКЛЮЧАЕМ SWAGGER ВСЕГДА (убрали проверку IsDevelopment)
+// Включаем Swagger ВСЕГДА (не только в Development)
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "CorpApp API v1");
+});
 
 app.UseHttpsRedirection();
 app.UseAuthorization();

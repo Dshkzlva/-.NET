@@ -101,6 +101,9 @@ namespace CorpApp.Migrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("facilities");
                 });
 
@@ -196,6 +199,9 @@ namespace CorpApp.Migrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name")
+                        .IsUnique();
+
                     b.ToTable("sport_categories");
                 });
 
@@ -227,9 +233,6 @@ namespace CorpApp.Migrations.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("CoachId");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
 
                     b.ToTable("sports_sections");
                 });
