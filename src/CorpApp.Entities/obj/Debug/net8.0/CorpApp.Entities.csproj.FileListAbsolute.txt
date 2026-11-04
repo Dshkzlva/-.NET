@@ -1,0 +1,15 @@
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\bin\Debug\net8.0\CorpApp.Entities.deps.json
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\bin\Debug\net8.0\CorpApp.Entities.runtimeconfig.json
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\bin\Debug\net8.0\CorpApp.Entities.dll
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\bin\Debug\net8.0\CorpApp.Entities.pdb
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.csproj.AssemblyReference.cache
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.AssemblyInfoInputs.cache
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.AssemblyInfo.cs
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.csproj.CoreCompileInputs.cache
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.sourcelink.json
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.dll
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\refint\CorpApp.Entities.dll
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.pdb
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\CorpApp.Entities.genruntimeconfig.cache
+C:\Users\voyno\Desktop\Примеры-20261008\src\CorpApp.Entities\obj\Debug\net8.0\ref\CorpApp.Entities.dll
