@@ -7,10 +7,10 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql("Host=localhost;Port=5433;Database=corpdb;Username=postgres;Password=postgres")
-            .Options;
-
-        return new AppDbContext(options);
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseNpgsql(
+            "Host=localhost;Port=5433;Database=corpdb;Username=postgres;Password=postgres",
+            b => b.MigrationsAssembly("CorpApp.Migrations"));
+        return new AppDbContext(optionsBuilder.Options);
     }
 }
