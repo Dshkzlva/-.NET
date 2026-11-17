@@ -2,4 +2,8 @@
 [Oo]bj/
 .vs/
 *.user
+data/
 src/data/
+*.suo
+*.cache
+src/CorpApp.Host/Properties/
