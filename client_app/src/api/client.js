@@ -1,16 +1,79 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 
+// Получаем токен из localStorage
+function getToken() {
+  return localStorage.getItem('jwt_token');
+}
+
+// Универсальная функция запросов с автоматической подстановкой токена
+async function apiFetch(endpoint, options = {}) {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...options.headers
+  };
+
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  if (!res.ok) throw new Error(`API Error: ${res.status}`);
+  
+  // Если ответ пустой (например, 204 No Content для DELETE), возвращаем null
+  if (res.status === 204) return null;
+  
+  return await res.json();
+}
+
+// Безопасное получение данных (с fallback, если API недоступен)
 async function safeGet(endpoint, fallback = []) {
   try {
-    const res = await fetch(`${API_BASE}${endpoint}`);
-    if (!res.ok) throw new Error('API Error');
-    return await res.json();
+    return await apiFetch(endpoint);
   } catch {
     return fallback;
   }
 }
 
 export const api = {
+  // НОВЫЙ МЕТОД ВХОДА ЧЕРЕЗ JWT
+  async login(email) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (!res.ok) return null; // Пользователь не найден
+
+      const data = await res.json();
+      
+      // 1. Сохраняем токен в браузере
+      localStorage.setItem('jwt_token', data.token);
+
+      // 2. Получаем профиль студента, чтобы узнать группу (теперь это защищённый запрос, но у нас есть токен!)
+      let groupNumber = 'Не указана';
+      if (data.user.roleId === 1) {
+        try {
+          const profiles = await apiFetch('/studentprofiles');
+          const profile = profiles.find(p => p.userId === data.user.id);
+          if (profile) groupNumber = profile.groupNumber || 'Не указана';
+        } catch (e) {
+          console.warn('Не удалось получить профиль', e);
+        }
+      }
+
+      return {
+        id: data.user.id,
+        email: data.user.email,
+        fullName: `${data.user.lastName} ${data.user.firstName}`,
+        role: data.user.roleId === 2 ? 'teacher' : 'student',
+        groupNumber: groupNumber
+      };
+    } catch (error) {
+      console.error('Login failed:', error);
+      return null;
+    }
+  },
+
   async getFullCatalog() {
     const [sections, categories, coaches, schedules, facilities] = await Promise.all([
       safeGet('/sportssections'),
@@ -39,10 +102,9 @@ export const api = {
         categoryName: cat ? cat.name : 'Спортивная секция',
         coachFullName: coach ? `${coach.lastName} ${coach.firstName}` : 'Тренер кафедры ФВ',
         schedules: secSchedules.length ? secSchedules : [
-          { dayOfWeek: 'Вторник', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' },
-          { dayOfWeek: 'Четверг', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' }
+          { dayOfWeek: 'Вторник', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' }
         ],
-        desc: `Секция «${sec.name}» ЮУрГУ — отличная возможность поддержать физическую форму, развить командные навыки и принять участие в университетских соревнованиях.`,
+        desc: `Секция «${sec.name}» ЮУрГУ — отличная возможность поддержать физическую форму.`,
         level: 'для всех',
         spots: 25,
         duration: '90 минут',
@@ -51,139 +113,82 @@ export const api = {
     });
   },
 
-  async login(email, roleName) {
-    const [users, roles, profiles] = await Promise.all([
-      safeGet('/users'),
-      safeGet('/userroles'),
-      safeGet('/studentprofiles')
-    ]);
-
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (found) {
-      const role = roles.find(r => r.id === found.roleId)?.name || roleName;
-      const profile = profiles.find(p => p.userId === found.id);
-      return {
-        id: found.id,
-        email: found.email,
-        fullName: `${found.lastName} ${found.firstName}`,
-        role,
-        groupNumber: profile?.groupNumber || 'КЭ-305'
-      };
-    }
-
-    if (roleName === 'teacher') {
-      return {
-        id: '00000000-0000-0000-0000-000000000002',
-        email: email || 'sokolov@susu.ru',
-        fullName: 'Соколов П.П.',
-        position: 'Доцент кафедры физкультурного воспитания',
-        role: 'teacher'
-      };
-    }
-
-    return {
-      id: '00000000-0000-0000-0000-000000000001',
-      email: email || 'ivanov@susu.ru',
-      fullName: 'Иванов Иван',
-      groupNumber: 'КЭ-305',
-      role: 'student'
-    };
-  },
-
   async getEnrollments(userId) {
-    const [enrollments, catalog] = await Promise.all([
-      safeGet('/enrollments'),
-      this.getFullCatalog()
-    ]);
+    try {
+      const [enrollments, catalog] = await Promise.all([
+        apiFetch('/enrollments'), // Теперь это защищённый запрос!
+        this.getFullCatalog()
+      ]);
 
-    const userItems = enrollments.filter(e => e.userId === userId);
-    if (!userItems.length) {
-      return [
-        {
-          id: 1,
-          sectionId: 1,
-          sectionName: 'Футбол',
-          categoryName: 'Командные игры',
-          scheduleText: 'Вт, Чт, Пт: 17:00-18:30',
-          facility: 'Спортивная площадка',
-          status: 'active'
-        }
-      ];
+      const userItems = enrollments.filter(e => e.userId === userId);
+      
+      return userItems.map(e => {
+        const sec = catalog.find(s => s.id === e.sectionId);
+        const firstSchedule = sec?.schedules?.[0];
+        return {
+          id: e.id,
+          sectionId: e.sectionId,
+          sectionName: sec ? sec.name : 'Секция',
+          categoryName: sec ? sec.categoryName : 'Категория',
+          scheduleText: sec?.schedules
+            ? sec.schedules.map(s => `${s.dayOfWeek}: ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`).join(', ')
+            : 'По расписанию',
+          facility: firstSchedule ? firstSchedule.facilityName : 'Зал',
+          status: e.status
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get enrollments:', error);
+      return [];
     }
-
-    return userItems.map(e => {
-      const sec = catalog.find(s => s.id === e.sectionId);
-      const firstSchedule = sec && sec.schedules && sec.schedules;
-      return {
-        id: e.id,
-        sectionId: e.sectionId,
-        sectionName: sec ? sec.name : 'Футбол',
-        categoryName: sec ? sec.categoryName : 'Командные игры',
-        scheduleText: sec && sec.schedules
-          ? sec.schedules.map(s => `${s.dayOfWeek}: ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`).join(', ')
-          : 'Вт, Чт, Пт: 17:00-18:30',
-        facility: firstSchedule ? firstSchedule.facilityName : 'Спортивная площадка',
-        status: e.status
-      };
-    });
   },
 
   async createEnrollment(payload) {
     try {
-      const res = await fetch(`${API_BASE}/enrollments`, {
+      return await apiFetch('/enrollments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      return res.ok ? await res.json() : payload;
-    } catch {
-      return payload;
+    } catch (error) {
+      console.error('Failed to create enrollment:', error);
+      return null;
     }
   },
 
   async cancelEnrollment(id) {
     try {
-      await fetch(`${API_BASE}/enrollments/${id}`, { method: 'DELETE' });
-    } catch {}
+      await apiFetch(`/enrollments/${id}`, { method: 'DELETE' });
+      return true;
+    } catch (error) {
+      console.error('Failed to cancel enrollment:', error);
+      return false;
+    }
+  },
+  
+  // Метод для выхода из системы
+  logout() {
+    localStorage.removeItem('jwt_token');
   }
 };
 
 function getSectionImage(name) {
   const map = {
-    'Футбол': 'Футбол.png',
-    'Баскетбол': 'Баскетбол.png',
-    'Волейбол': 'Волейбол.png',
-    'Плавание': 'Плаванье.png',
-    'Теннис': 'Тенис.png',
-    'Борьба': 'Борьба.png',
-    'Йога': 'Йога.png',
-    'Шахматы': 'Шахматы.png'
+    'Футбол': 'Футбол.png', 'Баскетбол': 'Баскетбол.png', 'Волейбол': 'Волейбол.png',
+    'Плавание': 'Плаванье.png', 'Теннис': 'Тенис.png', 'Борьба': 'Борьба.png',
+    'Йога': 'Йога.png', 'Шахматы': 'Шахматы.png'
   };
   const fileName = map[name] || 'Футбол.png';
   return new URL(`../assets/images/${fileName}`, import.meta.url).href;
 }
 
 function getMockSections() {
-  const list = [
-    { id: 1, name: 'Футбол', categoryName: 'Командные игры', coachFullName: 'Иванов Сергей Александрович' },
-    { id: 2, name: 'Баскетбол', categoryName: 'Командные игры', coachFullName: 'Кузнецов Дмитрий Игоревич' },
-    { id: 3, name: 'Волейбол', categoryName: 'Командные игры', coachFullName: 'Петрова Анна Игоревна' },
-    { id: 4, name: 'Плавание', categoryName: 'Водный спорт', coachFullName: 'Смирнов Алексей Владимирович' },
-    { id: 5, name: 'Теннис', categoryName: 'Ракеточные виды', coachFullName: 'Орлов Игорь Викторович' },
-    { id: 6, name: 'Борьба', categoryName: 'Единоборства', coachFullName: 'Волков Максим Сергеевич' },
-    { id: 7, name: 'Йога', categoryName: 'Общая подготовка', coachFullName: 'Соколова Елена Павловна' },
-    { id: 8, name: 'Шахматы', categoryName: 'Интеллектуальный спорт', coachFullName: 'Морозов Андрей Николаевич' }
-  ];
-  return list.map(item => ({
-    ...item,
-    level: 'для всех',
-    spots: 25,
-    duration: '90 минут',
-    desc: `Секция «${item.name}» ЮУрГУ — отличная возможность поддержать физическую форму и принять участие в университетских турнирах.`,
+  return [
+    { id: 1, name: 'Футбол', categoryName: 'Командные игры', coachFullName: 'Иванов Сергей' },
+    { id: 2, name: 'Баскетбол', categoryName: 'Командные игры', coachFullName: 'Кузнецов Дмитрий' }
+  ].map(item => ({
+    ...item, level: 'для всех', spots: 25, duration: '90 минут',
+    desc: `Секция «${item.name}» ЮУрГУ.`,
     image: getSectionImage(item.name),
-    schedules: [
-      { dayOfWeek: 'Вторник', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' },
-      { dayOfWeek: 'Четверг', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' }
-    ]
+    schedules: [{ dayOfWeek: 'Вторник', startTime: '17:00:00', endTime: '18:30:00', facilityName: 'Зал №1' }]
   }));
 }
