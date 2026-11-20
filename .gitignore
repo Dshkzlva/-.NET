@@ -7,3 +7,5 @@ src/data/
 *.suo
 *.cache
 src/CorpApp.Host/Properties/
+client_app/node_modules/
+client_app/dist/
